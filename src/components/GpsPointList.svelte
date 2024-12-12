@@ -1,52 +1,107 @@
 <script context="module" lang="ts">
-    export interface Point {
-      lat: number;
-      lon: number;
-      timestamp: string; // ou Date, selon votre besoin
-      transmission: string;
-    }
+  export interface Point {
+    lat: number;
+    lon: number;
+    timestamp: string; // ou Date, selon votre besoin
+    transmission: string;
+  }
 </script>
 
 <script lang="ts">
-    export let points: Point[] = []; // Liste des points
-    export let selectedPoint: Point | null = null; // Point sélectionné depuis l'extérieur
-    export let onPointClick: (point: Point) => void = () => {};
+  export let points: Point[] = []; // Liste des points
+  export let selectedPoint: Point | null = null; // Point sélectionné depuis l'extérieur
+  export let onPointClick: (point: Point) => void = () => {};
 
-    let selectedPointIndex: number | null = null; // Index du point sélectionné
+  let selectedPointIndex: number | null = null; // Index du point sélectionné
+  let tableBody: HTMLTableSectionElement | null = null; // Référence au corps du tableau
 
-    // Réagir aux changements de `selectedPoint`
-    $: {
-        if (selectedPoint) {
-            selectedPointIndex = points.findIndex(
-                (p) =>
-                    p.lat === selectedPoint.lat &&
-                    p.lon === selectedPoint.lon &&
-                    p.timestamp === selectedPoint.timestamp
-            );
-        }
+  // Réagir aux changements de `selectedPoint`
+  $: selectedPointIndex = selectedPoint
+    ? points.findIndex(
+        (p) =>
+          p.lat === selectedPoint.lat &&
+          p.lon === selectedPoint.lon &&
+          p.timestamp === selectedPoint.timestamp
+      )
+    : null;
+
+  $: {
+    if (selectedPointIndex !== null) {
+      scrollToSelectedPoint(); // Défilement automatique uniquement si un point est trouvé
     }
+  }
 
-    function handlePointClick(point: Point, index: number) {
-        selectedPointIndex = index; // Mettre à jour l'index local
-        onPointClick(point); // Notifier le parent
-    }
+  function handlePointClick(point: Point, index: number) {
+    selectedPointIndex = index; // Mettre à jour l'index local
+    selectedPoint = point;
+    onPointClick(point); // Notifier le parent
+  }
 
-    function stopScrollPropagation(event: Event) {
-        event.stopPropagation();
+  function stopScrollPropagation(event: Event) {
+    event.stopPropagation();
+  }
+
+  // Fonction pour défiler vers le point sélectionné
+  function scrollToSelectedPoint() {
+    if (selectedPointIndex !== null && tableBody) {
+      const row = tableBody.children[selectedPointIndex] as HTMLElement;
+      if (row) {
+        row.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      }
     }
+  }
 </script>
 
-  
-  
-  
-  <style>
+<div class="overlay-points" on:wheel={stopScrollPropagation}>
+  <h3>Points</h3>
+  {#if points.length > 0}
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Latitude</th>
+          <th>Longitude</th>
+          <th>Timestamp</th>
+          <th>Mode</th>
+        </tr>
+      </thead>
+      <tbody bind:this={tableBody}>
+        {#each points as { lat, lon, timestamp, transmission }, index}
+          <tr
+            class:selected={index === selectedPointIndex}
+            on:click={() =>
+              handlePointClick({ lat, lon, timestamp, transmission }, index)}
+          >
+            <td>{index + 1}</td>
+            <td>{lat}</td>
+            <td>{lon}</td>
+            <td>{new Date(timestamp).toLocaleString()}</td>
+            <td>
+              <span
+                class={`icon ${
+                  transmission === "GSM" ? "icon-gsm" : "icon-satellite"
+                } ${selectedPointIndex === index ? "icon-selected" : ""}`}
+                title={transmission}
+              ></span>
+            </td>
+          </tr>
+        {/each}
+      </tbody>
+    </table>
+  {:else}
+    <p style="padding: 10px; text-align: center; color: #7f8c8d;">
+      No points available
+    </p>
+  {/if}
+</div>
 
-.overlay-points {
+<style>
+  .overlay-points {
     position: absolute;
-    top: 350px; /* Positionné sous la liste des balises */
+    top: 400px; /* Positionné sous la liste des balises */
     left: 20px;
     width: 450px; /* Taille fixe en largeur */
-    max-height: 350px; /* Taille fixe en hauteur */
+    max-height: 400px; /* Taille fixe en hauteur */
     background: white;
     border-radius: 10px;
     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
@@ -90,76 +145,29 @@
     background-color: #f2f2f2;
   }
 
-    .icon {
-      width: 16px;
-      height: 16px;
-      display: inline-block;
-      background-size: contain;
-      background-repeat: no-repeat;
-    }
-  
-    .icon-gsm {
-      background-image: url('/public/assets/GSM.png'); /* Chemin vers l'icône GSM */
-      
-    }
-  
-    .icon-satellite {
-      background-image: url('/public/assets/SAT.png'); /* Chemin vers l'icône Satellite */
-    }
+  .icon {
+    width: 16px;
+    height: 16px;
+    display: inline-block;
+    background-size: contain;
+    background-repeat: no-repeat;
+  }
 
-    .selected {
-  background-color: #242526; /* Couleur de fond pour le point sélectionné */
-  color: white; /* Couleur du texte */
-  font-weight: bold; /* Texte plus gras */
-}
+  .icon-gsm {
+    background-image: url("/public/assets/GSM.png"); /* Chemin vers l'icône GSM */
+  }
 
-.icon-selected {
-  filter: invert(1); /* Inverse les couleurs de l'image */
-}
+  .icon-satellite {
+    background-image: url("/public/assets/SAT.png"); /* Chemin vers l'icône Satellite */
+  }
 
+  .selected {
+    background-color: #242526; /* Couleur de fond pour le point sélectionné */
+    color: white; /* Couleur du texte */
+    font-weight: bold; /* Texte plus gras */
+  }
 
-  </style>
-  
-  <div class="overlay-points" on:wheel={stopScrollPropagation}>
-    <h3>Points</h3>
-    {#if points.length > 0}
-      <table>
-        <thead>
-          <tr>
-            <th>#</th>
-            <th>Latitude</th>
-            <th>Longitude</th>
-            <th>Timestamp</th>
-            <th>Mode</th>
-          </tr>
-        </thead>
-        <tbody>
-          {#each points as { lat, lon, timestamp, transmission }, index}
-            <tr
-              class:selected={index === selectedPointIndex}
-              on:click={() => handlePointClick({ lat, lon, timestamp, transmission }, index)}
-            >
-              <td>{index + 1}</td>
-              <td>{lat}</td>
-              <td>{lon}</td>
-              <td>{new Date(timestamp).toLocaleString()}</td>
-              <td>
-                <span
-                  class={`icon ${
-                    transmission === 'GSM' ? 'icon-gsm' : 'icon-satellite'
-                  } ${selectedPointIndex === index ? 'icon-selected' : ''}`}
-                  title={transmission}
-                ></span>
-              </td>
-            </tr>
-          {/each}
-        </tbody>
-      </table>
-    {:else}
-      <p style="padding: 10px; text-align: center; color: #7f8c8d;">
-        No points available
-      </p>
-    {/if}
-</div>
-  
-  
+  .icon-selected {
+    filter: invert(1); /* Inverse les couleurs de l'image */
+  }
+</style>
