@@ -6,12 +6,14 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "prepare": "chmod +x node_modules/.bin/vite"
   },
   "devDependencies": {
     "@sveltejs/vite-plugin-svelte": "^5.0.0",
+    "cross-env": "^7.0.3",
     "svelte": "^5.2.7",
-    "vite": "^6.0.1"
+    "vite": "^6.0.3"
   },
   "dependencies": {
     "leaflet": "^1.9.4"
